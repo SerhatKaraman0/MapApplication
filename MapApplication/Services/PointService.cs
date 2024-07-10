@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,8 +6,6 @@ using MapApplication.Interfaces;
 using MapApplication.Models;
 using MapApplication.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Drawing;
-using System.Reflection;
 
 namespace MapApplication.Services
 {
@@ -15,179 +13,24 @@ namespace MapApplication.Services
     {
         private readonly IResponseService _responseService;
         private readonly AppDbContext _context;
-        private readonly IDatabaseOperationsService _databaseService;
 
-        public PointService(AppDbContext context, IResponseService responseService, IDatabaseOperationsService databaseOperationsService)
+        public PointService(AppDbContext context, IResponseService responseService)
         {
             _responseService = responseService;
             _context = context;
-            _databaseService = databaseOperationsService;
         }
 
-        public async Task<Response> GeneratePoints()
-        {
-            try
-            {
-                Random rnd = new Random();
-                List<string> cities = new List<string>
-                {
-                    "Ankara", "İstanbul", "İzmir", "Antalya",
-                    "Muğla", "Adana", "Eskişehir", "Mersin",
-                    "Samsun", "Kocaeli"
-                };
-
-                var points = new List<PointDb>();
-
-                foreach (var city in cities)
-                {
-                    var item = new PointDb()
-                    {
-                        X_coordinate = rnd.NextDouble() * 99999,  // X as double
-                        Y_coordinate = rnd.NextDouble() * 99999,  // Y as double
-                        Name = city
-                    };
-                    var response = await _databaseService.Create(item);
-
-                    if (response.success)
-                    {
-                        points.Add(item);
-                    }
-                    Console.WriteLine($"Failed to create point for point: {response.ResponseMessage}");
-                }
-
-                return _responseService.SuccessResponse(points, "Points generated successfully.", true);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error generating points: {ex.Message}", false);
-            }
-        }
-
-
-        public async Task<Response> Add(PointDb point)
-        {
-            try
-            {
-                var response = await _databaseService.Create(point);
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(new List<PointDb> { point }, "Point added successfully.", true);
-                }
-                Console.WriteLine($"Failed to create point for point: {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), "Failed to add point.", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error adding point: {ex.Message}", false);
-            }
-        }
-
-        public async Task<Response> Update(int id, PointDb updatedPoint)
-        {
-            try
-            {
-                var response = await _databaseService.Update(id, updatedPoint);
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(new List<PointDb> { updatedPoint }, "Point updated successfully.", true);
-                }
-                Console.WriteLine($"Failed to create point for {id}: {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Failed to update point with id {id}.", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error updating point: {ex.Message}", false);
-            }
-        }
-
-        public async Task<Response> UpdateByName(string name, PointDb updatedPoint)
-        {
-            try
-            {
-                var response = await _databaseService.UpdateByName(name, updatedPoint);
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(new List<PointDb> { updatedPoint }, "Point updated successfully.", true);
-                }
-                Console.WriteLine($"Failed to create point for {name}: {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Failed to update point with name {name}.", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error updating point: {ex.Message}", false);
-            }
-        }
-
-        public async Task<Response> DeleteById(int id)
-        {
-            try
-            {
-                var response = await _databaseService.Delete(id);
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(null, $"Success deleting the point with id: {id}", true);
-                }
-                Console.WriteLine($"Failed to create point for {id}: {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Can't find the point with id: {id}", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Problem occurred when deleting the point with id: {id} with Error message {ex.Message}", false);
-            }
-        }
-
-        public async Task<Response> DeleteByName(string name)
-        {
-            try
-            {
-                var response = await _databaseService.DeleteByName(name);
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(null, $"Success deleting the point with name: {name}", true);
-                }
-                Console.WriteLine($"Failed to create point for : {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Can't find the point with name: {name}", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Problem occurred when deleting the point with name: {name} with Error message {ex.Message}", false);
-            }
-        }
-
-        public async Task<Response> DeleteAll()
-        {
-            try
-            {
-                var response = await _databaseService.DeleteAll();
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(null, "Success removing all data from database", true);
-                }
-                Console.WriteLine($"Failed to create point for : {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), "Error deleting points", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error deleting points: {ex.Message}", false);
-            }
-        }
-
-
+        // GET Requests
         public async Task<Response> GetAll()
         {
             try
             {
-                var response = await _databaseService.SelectAll();
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(response.point, "Points retrieved successfully", true);
-                }
-                Console.WriteLine($"Failed to create point for: {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), response.ResponseMessage, false);
+                var points = await _context.Points.ToListAsync();
+                return _responseService.SuccessResponse(points, "Points retrieved successfully", true);
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error fetching points: {ex.Message}", false);
+                return _responseService.ErrorResponse(new List<PointDb>(), "Error fetching points", false);
             }
         }
 
@@ -195,17 +38,16 @@ namespace MapApplication.Services
         {
             try
             {
-                var response = await _databaseService.FindById(id);
-                if (response.success)
+                var point = await _context.Points.FindAsync(id);
+                if (point != null)
                 {
-                    return _responseService.SuccessResponse(response.point, $"Point with id: {id} retrieved successfully", true);
+                    return _responseService.SuccessResponse(new List<PointDb> { point }, $"Point with id: {id} retrieved successfully", true);
                 }
-                Console.WriteLine($"Failed to create point for {id}: {response.ResponseMessage}");
                 return _responseService.ErrorResponse(new List<PointDb>(), $"Can't find point with the id: {id}", false);
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error fetching point: {ex.Message}", false);
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Something went wrong with error {ex.Message}", false);
             }
         }
 
@@ -213,17 +55,12 @@ namespace MapApplication.Services
         {
             try
             {
-                var response = await _databaseService.Count();
-                if (response.success)
-                {
-                    return _responseService.SuccessResponse(null, response.ResponseMessage, true);
-                }
-                Console.WriteLine($"Failed to create point for : {response.ResponseMessage}");
-                return _responseService.ErrorResponse(new List<PointDb>(), "Error fetching points count.", false);
+                var pointsCount = await _context.Points.CountAsync();
+                return _responseService.SuccessResponse(new List<PointDb> { }, $"{pointsCount} points retrieved successfully", true);
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error fetching points count: {ex.Message}", false);
+                return _responseService.ErrorResponse(new List<PointDb> { }, "An error occurred", false);
             }
         }
 
@@ -239,7 +76,6 @@ namespace MapApplication.Services
                 {
                     return _responseService.SuccessResponse(pointList, $"{pointList.Count} points in range returned successfully.", true);
                 }
-
                 return _responseService.ErrorResponse(new List<PointDb> { }, "Couldn't find points in range.", false);
             }
             catch (Exception ex)
@@ -247,13 +83,6 @@ namespace MapApplication.Services
                 return _responseService.ErrorResponse(new List<PointDb> { }, $"Error retrieving points: {ex.Message}", false);
             }
         }
-
-
-        ///
-        ///
-        /// EXTRAS
-        /// 
-        ///
 
         public async Task<Response> GetPointsInRadius(double centerX, double centerY, double radius)
         {
@@ -314,12 +143,184 @@ namespace MapApplication.Services
             }
         }
 
-        public Task<Response> DeleteInRange(double minX, double minY, double max_X, double maxY)
+        // POST Requests
+        public async Task<Response> GeneratePoints()
         {
-            throw new NotImplementedException();
+            try
+            {
+                Random rnd = new Random();
+                List<string> cities = new List<string>
+                {
+                    "Ankara", "İstanbul", "İzmir", "Antalya",
+                    "Muğla", "Adana", "Eskişehir", "Mersin",
+                    "Samsun", "Kocaeli"
+                };
+
+                for (int i = 0; i < 10; i++)
+                {
+                    var item = new Data.PointDb()
+                    {
+                        X_coordinate = rnd.Next(1, 99999),
+                        Y_coordinate = rnd.Next(1, 99999),
+                        Name = cities[i]
+                    };
+                    _context.Points.Add(item);
+                }
+                await _context.SaveChangesAsync();
+
+                var points = await _context.Points.ToListAsync();
+                return _responseService.SuccessResponse(points, "Points generated successfully.", true);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error generating points: {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> Add(PointDb point)
+        {
+            try
+            {
+                await _context.Points.AddAsync(point);
+                await _context.SaveChangesAsync();
+                var pointList = new List<PointDb> { point };
+                return _responseService.SuccessResponse(pointList, "Point added successfully.", true);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error adding point: {ex.Message}", false);
+            }
+        }
+
+        // PUT Requests
+        public async Task<Response> Update(int id, PointDb updatedPoint)
+        {
+            try
+            {
+                var point = await _context.Points.FindAsync(id);
+                if (point != null)
+                {
+                    point.X_coordinate = updatedPoint.X_coordinate;
+                    point.Y_coordinate = updatedPoint.Y_coordinate;
+                    point.Name = updatedPoint.Name;
+                    await _context.SaveChangesAsync();
+                    var pointList = new List<PointDb> { point };
+                    return _responseService.SuccessResponse(pointList, "Point updated successfully.", true);
+                }
+                return _responseService.ErrorResponse(new List<PointDb> { }, $"Point with id {id} not found.", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error updating point: {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> UpdateByName(string Name, PointDb updatedPoint)
+        {
+            try
+            {
+                var point = await _context.Points.FirstOrDefaultAsync(p => p.Name == Name);
+                if (point != null)
+                {
+                    point.X_coordinate = updatedPoint.X_coordinate;
+                    point.Y_coordinate = updatedPoint.Y_coordinate;
+                    point.Name = updatedPoint.Name;
+                    await _context.SaveChangesAsync();
+                    var pointList = new List<PointDb> { point };
+                    return _responseService.SuccessResponse(pointList, "Point updated successfully.", true);
+                }
+                return _responseService.ErrorResponse(new List<PointDb> { }, $"Point with name {Name} not found.", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error updating point: {ex.Message}", false);
+            }
+        }
+
+        // DELETE Requests
+        public async Task<Response> DeleteById(int id)
+        {
+            try
+            {
+                var point = await _context.Points.FindAsync(id);
+                if (point != null)
+                {
+                    _context.Points.Remove(point);
+                    await _context.SaveChangesAsync();
+                    var pointsList = new List<PointDb> { point };
+                    return _responseService.SuccessResponse(pointsList, $"Success deleting the point with id: {id}", true);
+                }
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Can't find the point with id: {id}", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Problem occured when deleting the point with id: {id} with Error message {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> DeleteByName(string name)
+        {
+            try
+            {
+                var point = await _context.Points.FirstOrDefaultAsync(p => p.Name == name);
+                if (point != null)
+                {
+                    _context.Points.Remove(point);
+                    await _context.SaveChangesAsync();
+                    var pointsList = new List<PointDb> { point };
+                    return _responseService.SuccessResponse(pointsList, $"Success deleting the point with name: {name}", true);
+                }
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Can't find the point with name: {name}", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Problem occured when deleting the point with name: {name} with Error message {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> DeleteAll()
+        {
+            try
+            {
+                var points = _context.Points;
+
+                if (points != null)
+                {
+                    _context.Points.RemoveRange(points);
+                    await _context.SaveChangesAsync();
+                    return _responseService.SuccessResponse(new List<PointDb>(), "Success removing all data from database", true);
+                }
+
+                return _responseService.ErrorResponse(new List<PointDb>(), "Error deleting points", false);
+
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb>(), "Error deleting points", false);
+            }
+        }
+
+        public async Task<Response> DeleteInRange(double minX, double minY, double max_X, double maxY)
+        {
+            try
+            {
+                var points = await _context.Points.Where(p => (minX <= p.X_coordinate) && (minY <= p.Y_coordinate) && (p.X_coordinate <= max_X) && (p.Y_coordinate <= maxY)).ToListAsync();
+                var initialLength = points.Count;
+                if (points != null)
+                {
+                    _context.Points.RemoveRange(points);
+                    await _context.SaveChangesAsync();
+                    var remainingLength = points.Count;
+                    var resLength = initialLength - remainingLength;
+                    return _responseService.SuccessResponse(new List<PointDb>(), $"{remainingLength} Points deleted successfully", true);
+                }
+                return _responseService.ErrorResponse(new List<PointDb>(), "Error deleting points", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Something went wrong with error message {ex.Message}", false);
+            }
         }
     }
 }
-
-
 

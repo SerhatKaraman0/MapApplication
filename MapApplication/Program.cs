@@ -14,7 +14,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("WebApiDatabase")));  // Ensure this matches the appsettings.json
 
 // Register your services
-builder.Services.AddScoped<IDatabaseOperationsService, DatabaseOperationsService>();  // Register DatabaseOperationsService as IDatabaseOperationsService
+ // Register DatabaseOperationsService as IDatabaseOperationsService
 builder.Services.AddScoped<IPointService, PointService>();  // Register PointService as IPointService
 builder.Services.AddScoped<IResponseService, ResponseService>();  // Register ResponseService as IResponseService
 
