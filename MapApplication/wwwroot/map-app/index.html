@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="https://openlayers.org/favicon.ico"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/jspanel4@4.15.0/dist/jspanel.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/2.1.2/css/dataTables.dataTables.min.css"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Map Application</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="container">
+        <div class="app-name">MapApplication</div>
+        <div class="buttons">
+          <button class="btn add-point-btn">Add Point</button>
+          <button class="btn real-query-btn">Query</button>
+          <button class="btn query-btn">Custom Functions</button>
+        </div>
+      </div>
+    </nav>
+    <div id="alert-container"></div>
+    <div id="map">
+      <button id="expandButton" class="expand-button">+</button>
+      <div class="floating-action-btn-container">
+        <button id="customButton" class="custom-button">
+          <img
+            src="/assets/reset.png"
+            title="reset view button"
+            alt="reset view btn"
+            class="reset-view-btn"
+          />
+        </button>
+        <button
+          id="add-point-btn"
+          title="add point button"
+          class="add-point-btn"
+        >
+          <img src="/assets/add-point.png" alt="add-point-mode" />
+        </button>
+        <button
+          id="drag-and-update-btn"
+          title="drag to update button"
+          class="drag-and-update-btn"
+        >
+          <img src="/assets/dragandupdate.png" alt="drag and update points" />
+        </button>
+        <button
+          id="draw-polygon-btn"
+          title="draw polygon button"
+          class="draw-polygon-btn"
+        >
+          <img src="/assets/polygon.png" alt="draw a polygon" />
+        </button>
+        <button
+          id="draw-line-btn"
+          title="draw polygon button"
+          class="draw-line-btn"
+        >
+          <img src="/assets/line-string.png" alt="draw a line" />
+        </button>
+        <button
+          id="draw-circle-btn"
+          title="draw circle button"
+          class="draw-circle-btn"
+        >
+          <img src="/assets/circle.png" alt="draw a circle" />
+        </button>
+      </div>
+    </div>
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-content">
+        <span class="close-sidebar">&times;</span>
+        <div class="form-section" id="add-point-form">
+          <h2>Add Point</h2>
+          <label for="x_coordinate">X Coordinate</label>
+          <input type="text" id="x_coordinate" />
+          <label for="y_coordinate">Y Coordinate</label>
+          <input type="text" id="y_coordinate" />
+          <label for="point_name">Name</label>
+          <input type="text" id="point_name" />
+          <button class="btn save-btn" id="add-point-button-save">Save</button>
+        </div>
+
+        <div class="form-section" id="query-table-form">
+          <table id="query-table" class="display">
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>X Coordinate</th>
+                <th>Y Coordinate</th>
+                <th>Options</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="form-section" id="query-form" style="display: none">
+          <div
+            class="collapsible-section"
+            id="collapsible-section-generate-points"
+          >
+            <button class="collapsible">Custom Query</button>
+            <div class="content">
+              <label>Name:</label>
+              <input type="text" id="custom-query-name" />
+              <label>Description:</label>
+              <input type="text" id="custom-query-description" />
+              <label>Query:</label>
+              <textarea
+                name="custom-query-query"
+                id="custom-query-query"
+                cols="30"
+                rows="10"
+              ></textarea>
+              <button class="btn save-btn" id="custom-query-apply">
+                Apply
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-get-all-points"
+          >
+            <button class="collapsible">Get All Points</button>
+
+            <div class="content">
+              <p>Retieve All Points</p>
+              <button class="btn save-btn" id="get-all-points-btn">
+                Apply
+              </button>
+              <button class="btn delete-btn" id="get-all-points-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-generate-points"
+          >
+            <button class="collapsible">Generate Points</button>
+            <div class="content">
+              <p>Generate 10 Random Points</p>
+              <button class="btn save-btn" id="generate-points-btn">
+                Apply
+              </button>
+              <button class="btn delete-btn" id="generate-points-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-delete-all-points"
+          >
+            <button class="collapsible">Delete All Points</button>
+            <div class="content">
+              <p>Delete All Points</p>
+              <button class="btn save-btn" id="delete-all-points-btn">
+                Apply
+              </button>
+              <button class="btn delete-btn" id="delete-all-points-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-update-point"
+          >
+            <button class="collapsible">Update</button>
+            <div class="content">
+              <label>Id:</label>
+              <input type="text" id="update-point-id" />
+              <label>X Coordinate:</label>
+              <input type="text" id="update-point-x" />
+              <label>Y Coordinate:</label>
+              <input type="text" id="update-point-y" />
+              <label>Name:</label>
+              <input type="text" id="update-point-name-field" />
+              <button class="btn save-btn" id="update-point-btn">Apply</button>
+              <button class="btn delete-btn" id="update-point-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-update-point-by-name"
+          >
+            <button class="collapsible">Update By Name</button>
+            <div class="content">
+              <label>Name:</label>
+              <input type="text" id="update-point-name-name" />
+              <label>X Coordinate:</label>
+              <input type="text" id="update-point-name-x" />
+              <label>Y Coordinate:</label>
+              <input type="text" id="update-point-name-y" />
+              <label>Updated Name:</label>
+              <input type="text" id="update-point-updated-name" />
+              <button class="btn save-btn" id="update-point-name-btn">
+                Apply
+              </button>
+              <button class="btn delete-btn" id="update-point-name-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+          <!-- Add more collapsible sections as needed -->
+          <div
+            class="collapsible-section"
+            id="collapsible-section-get-point-by-id"
+          >
+            <button class="collapsible">Get Point By Id</button>
+            <div class="content">
+              <label for="pointId">Point ID:</label>
+              <input type="text" id="pointId" />
+              <button class="btn save-btn" id="getPointByIdBtn">Apply</button>
+              <button class="btn delete-btn" id="get-point-by-id-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-get-nearest-point"
+          >
+            <button class="collapsible">Get Nearest Point</button>
+            <div class="content">
+              <label for="x_coordinate_nearest_point">X Coordinate:</label>
+              <input type="text" id="x_coordinate_nearest_point" />
+              <label for="y_coordinate_nearest_point">Y Coordinate:</label>
+              <input type="text" id="y_coordinate_nearest_point" />
+              <button class="btn save-btn" id="getNearestPointBtn">
+                Apply
+              </button>
+              <button class="btn delete-btn" id="get-nearest-point-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div class="collapsible-section" id="collapsible-section-search">
+            <button class="collapsible">Search</button>
+            <div class="content">
+              <label for="searchX">X Coordinate:</label>
+              <input type="text" id="searchX" />
+              <label for="searchY">Y Coordinate:</label>
+              <input type="text" id="searchY" />
+              <label for="range">Range:</label>
+              <input type="text" id="range" />
+              <button class="btn save-btn" id="searchBtn">Apply</button>
+              <button class="btn delete-btn" id="search-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-delete-by-id"
+          >
+            <button class="collapsible">Delete By Id</button>
+            <div class="content">
+              <label for="deleteId">ID:</label>
+              <input type="text" id="deleteId" />
+              <button class="btn save-btn" id="deletePointBtn">Apply</button>
+              <button class="btn delete-btn" id="delete-point-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+          <!--
+          <div
+            class="collapsible-section"
+            id="collapsible-section-get-point-in-radius"
+          >
+            <button class="collapsible">Get Points in Radius</button>
+            <div class="content">
+              <label for="circleX">Circle X:</label>
+              <input type="text" id="circleX" />
+              <label for="circleY">Circle Y:</label>
+              <input type="text" id="circleY" />
+              <label for="radius">Radius:</label>
+              <input type="text" id="radius" />
+              <button class="btn save-btn" id="getPointsInRadiusBtn">
+                Apply
+              </button>
+              <button
+                class="btn delete-btn"
+                id="get-points-in-raidus-btn-delete"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+          <div class="collapsible-section" id="collapsible-section-distance">
+            <button class="collapsible">Distance</button>
+            <div class="content">
+              <label for="pointName1">Point Name 1:</label>
+              <input type="text" id="pointName1" />
+              <label for="pointName2">Point Name 2:</label>
+              <input type="text" id="pointName2" />
+              <button class="btn save-btn" id="distanceBtn">Apply</button>
+              <button class="btn delete-btn" id="distance-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+           <div
+            class="collapsible-section"
+            id="collapsible-section-delete-by-range"
+          >
+            <button class="collapsible">Delete By Range</button>
+            <div class="content">
+              <label for="minX">Min X:</label>
+              <input type="text" id="minX" />
+              <label for="minY">Min Y:</label>
+              <input type="text" id="minY" />
+              <label for="max_X">Max X:</label>
+              <input type="text" id="max_X" />
+              <label for="maxY">Max Y:</label>
+              <input type="text" id="maxY" />
+              <button class="btn save-btn" id="deleteByRangeBtn">Apply</button>
+              <button class="btn delete-btn" id="delete-by-range-btn-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="collapsible-section"
+            id="collapsible-section-delete-by-name"
+          >
+            <button class="collapsible">Delete By Name</button>
+            <div class="content">
+              <label for="deleteName">Name:</label>
+              <input type="text" id="deleteName" />
+              <button class="btn save-btn" id="deletePointByNameBtn">
+                Apply
+              </button>
+              <button class="btn delete-btn" id="delete-point-by-name-delete">
+                Delete
+              </button>
+            </div>
+          </div>
+          
+          
+          
+          -->
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspanel4@4.15.0/dist/jspanel.js"></script>
+  </body>
+</html>

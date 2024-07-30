@@ -8,6 +8,8 @@ namespace MapApplication.Interfaces
 	{
         Response ErrorResponse(List<PointDb> points, string v1, bool v2);
         Response SuccessResponse(List<PointDb> points, string v1, bool v2);
+        Response SuccessResponse<T>(List<T> points, string message, bool success);
+        Response ErrorResponse<T>(List<T> points, string message, bool success);
     }
 }
 

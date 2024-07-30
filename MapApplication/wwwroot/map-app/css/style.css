@@ -1,0 +1,418 @@
+@import "../node_modules/ol/ol.css";
+
+html,
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  height: 100%;
+}
+
+/* Navbar Styles */
+.navbar {
+  background-color: black;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* Container inside the navbar */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* App name styles */
+.app-name {
+  color: white;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+/* Buttons container styles */
+.buttons {
+  display: flex;
+  gap: 15px;
+}
+
+/* Button styles */
+.btn {
+  background-color: white;
+  color: black;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.btn:hover {
+  background-color: grey;
+  color: white;
+}
+
+/* Map styles */
+#map {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: all 0.5s;
+  border: none;
+}
+
+/* Sidebar styles */
+.sidebar {
+  height: 100vh; /* Use 100vh for full viewport height */
+  width: 0;
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  background-color: white;
+  overflow-x: hidden;
+  overflow-y: auto; /* Add vertical scrolling */
+  transition: 0.5s;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+  padding-top: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-content {
+  padding: 10px;
+  flex: 1; /* Allows the content to take available space */
+  overflow-y: auto; /* Add vertical scrolling if content overflows */
+}
+
+.sidebar-content .close-sidebar {
+  position: absolute;
+  top: 10px;
+  right: 25px;
+  font-size: 36px;
+  cursor: pointer;
+}
+
+/* Sidebar heading */
+.sidebar-content h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+/* Sidebar form labels */
+.sidebar-content label {
+  display: block;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+/* Sidebar form inputs */
+.sidebar-content input[type="text"] {
+  width: 80%;
+  padding: 10px;
+  margin-top: 5px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* Save Point button */
+.sidebar-content .btn.save-btn {
+  margin-bottom: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.sidebar-content .btn.save-btn:hover {
+  background-color: #45a049;
+}
+
+.sidebar-content .btn.delete-btn {
+  margin-bottom: 10px;
+  background-color: red;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+#delete-point-popup-btn {
+  margin-bottom: 10px;
+  background-color: red;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.sidebar-content .btn.delete-btn:hover {
+  background-color: red;
+}
+
+body.sidebar-open #map {
+  width: 70%;
+}
+
+/* Popup styles */
+.popup {
+  position: absolute;
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #cccccc;
+  bottom: 12px;
+  left: -50px;
+  min-width: 280px;
+}
+
+.popup:after,
+.popup:before {
+  top: 100%;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.popup:after {
+  border-top-color: white;
+  border-width: 10px;
+  left: 48px;
+  margin-left: -10px;
+}
+.popup:before {
+  border-top-color: #cccccc;
+  border-width: 11px;
+  left: 48px;
+  margin-left: -11px;
+}
+
+/* Collapsible button styles */
+.collapsible {
+  background-color: #777;
+  color: white;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+/* Collapsible button active state and hover */
+.collapsible.active,
+.collapsible:hover {
+  background-color: #555;
+}
+
+/* Collapsible content styles */
+.content {
+  padding: 0 18px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+  background-color: #f1f1f1;
+}
+
+/* Expandable content */
+.content.show {
+  max-height: 2000px;
+}
+
+.reset-view-btn {
+  text-align: center;
+  width: 20px;
+  height: 20px;
+}
+
+.alert {
+  position: fixed;
+  left: 10px;
+  width: 67%;
+  bottom: 765px; /* Position the alert at the bottom of the viewport */
+  z-index: 1000;
+  background-color: #f44336;
+  color: white;
+  padding: 15px;
+  margin: 0; /* Remove margin */
+  border-radius: 5px;
+}
+
+.alert.success {
+  background-color: green;
+}
+
+.alert.fail {
+  background-color: #f44336;
+}
+
+.alert.message {
+  background-color: rgb(162, 35, 162);
+}
+
+.alert .closebtn {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.alert.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.ol-popup-closer {
+  text-decoration: none;
+  position: absolute;
+  top: 2px;
+  right: 8px;
+}
+.ol-popup-closer:after {
+  content: "✖";
+}
+
+.query-table-btn.view {
+  margin: 2px;
+  color: transparent;
+  border: 1px solid black;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.query-table-btn.view:hover {
+  background-color: rgb(0, 122, 255);
+}
+
+.query-table-btn.update {
+  margin: 2px;
+  color: transparent;
+  border: 1px solid black;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.query-table-btn.update:hover {
+  background-color: rgb(34, 193, 34);
+}
+
+.query-table-btn.delete {
+  margin: 2px;
+  color: transparent;
+  border: 1px solid black;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.query-table-btn.delete:hover {
+  background-color: rgb(213, 115, 115);
+}
+
+.query-row-btn-group {
+  display: flex;
+  flex-direction: row;
+}
+
+.query-table-btn-img {
+  width: 23px;
+  height: 23px;
+}
+.expand-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  font-size: 30px;
+  width: 50px;
+  height: 50px;
+  color: white;
+  background-color: rgb(230, 116, 116);
+  border-radius: 50%;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.floating-action-btn-container {
+  position: fixed;
+  bottom: 100px; /* Adjust based on the size of the expand button */
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: scale(0);
+  transform-origin: bottom center;
+  z-index: 1000; /* Ensure the buttons are above other elements */
+}
+
+.floating-action-btn-container.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.floating-action-btn-container button {
+  margin-bottom: 10px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background-color: white;
+  color: black;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.floating-action-btn-container button img {
+  width: 40px; /* Adjust as needed */
+  height: 40px; /* Adjust as needed */
+}
+
+.drag-and-update-btn.active {
+  background-color: rgb(230, 116, 116);
+}
+
+.draw-polygon-btn.active {
+  background-color: rgb(230, 116, 116);
+}
+
+.draw-circle-btn.active {
+  background-color: rgb(230, 116, 116);
+}
+
+.add-point-btn.active {
+  background-color: rgb(230, 116, 116);
+}
+
+.draw-line-btn.active {
+  background-color: rgb(230, 116, 116);
+}

@@ -1,0 +1,19 @@
+{
+  "name": "map-app",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.3.3"
+  },
+  "dependencies": {
+    "datatables.net-dt": "^2.1.2",
+    "jquery": "^3.7.1",
+    "jspanel4": "^4.16.1",
+    "ol": "latest",
+    "pg": "^8.12.0"
+  }
+}

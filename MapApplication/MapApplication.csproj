@@ -25,11 +25,27 @@
     <None Remove="Interfaces\" />
     <None Remove="Models\" />
     <None Remove="Data\" />
+    <None Remove="Repositories\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Services\" />
     <Folder Include="Interfaces\" />
     <Folder Include="Models\" />
     <Folder Include="Data\" />
+    <Folder Include="Repositories\" />
+    <Folder Include="wwwroot\map-app\js\" />
+    <Folder Include="wwwroot\map-app\css\" />
+    <Folder Include="wwwroot\map-app\lib\" />
+    <Folder Include="wwwroot\map-app\public\" />
+    <Folder Include="wwwroot\map-app\public\data\" />
+    <Folder Include="wwwroot\map-app\public\assets\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="wwwroot\map-app\js\" />
+    <Content Remove="wwwroot\map-app\css\" />
+    <Content Remove="wwwroot\map-app\lib\" />
+    <Content Remove="wwwroot\map-app\public\" />
+    <Content Remove="wwwroot\map-app\public\data\" />
+    <Content Remove="wwwroot\map-app\public\assets\" />
   </ItemGroup>
 </Project>

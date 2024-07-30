@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using MapApplication.Data;
 using MapApplication.Interfaces;
 using MapApplication.Models;
 using Microsoft.AspNetCore.Mvc;
-using MapApplication.Data;
 
 namespace MapApplication.Controllers
 {
@@ -10,10 +11,12 @@ namespace MapApplication.Controllers
     [ApiController]
     public class ValuesController : ControllerBase
     {
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IPointService _pointService;
 
-        public ValuesController(IPointService pointService)
+        public ValuesController(IUnitOfWork unitOfWork, IPointService pointService)
         {
+            _unitOfWork = unitOfWork;
             _pointService = pointService;
         }
 
@@ -37,7 +40,6 @@ namespace MapApplication.Controllers
             var response = _pointService.GetById(id);
             return response;
         }
-
 
         [HttpGet("pointsInRadius")]
         public Task<Response> GetPointsInRadius(double circleX, double circleY, double radius)
@@ -75,58 +77,59 @@ namespace MapApplication.Controllers
         }
 
         [HttpPost]
-        public Task<Response> Add(PointDb point)
+        public async Task<Response> Add(PointDb point)
         {
-            var response = _pointService.Add(point);
+            var response = await _pointService.Add(point);
+            await _unitOfWork.CommitAsync();  
             return response;
         }
-
 
         [HttpPut("{id}")]
-        public Task<Response> Update([FromRoute] int id, [FromBody] PointDb updatedPoint)
+        public async Task<Response> Update([FromRoute] int id, [FromBody] PointDb updatedPoint)
         {
-            var response = _pointService.Update(id, updatedPoint);
+            var response = await _pointService.Update(id, updatedPoint);
+            await _unitOfWork.CommitAsync();  
             return response;
         }
-
-        
 
         [HttpPut("updateByName/{name}")]
-        public Task<Response> UpdateByName([FromRoute] string name, [FromBody] PointDb updatedPoint)
+        public async Task<Response> UpdateByName([FromRoute] string name, [FromBody] PointDb updatedPoint)
         {
-            var response = _pointService.UpdateByName(name, updatedPoint);
+            var response = await _pointService.UpdateByName(name, updatedPoint);
+            await _unitOfWork.CommitAsync(); 
             return response;
         }
 
-        
-
         [HttpDelete("all")]
-        public Task<Response> DeleteAll()
+        public async Task<Response> DeleteAll()
         {
-            var response = _pointService.DeleteAll();
+            var response = await _pointService.DeleteAll();
+            await _unitOfWork.CommitAsync();  
             return response;
         }
 
         [HttpDelete("deleteByRange")]
-        public Task<Response> DeleteInRange(double minX, double minY, double max_X, double maxY)
+        public async Task<Response> DeleteInRange(double minX, double minY, double max_X, double maxY)
         {
-            var response = _pointService.DeleteInRange(minX, minY, max_X, maxY);
+            var response = await _pointService.DeleteInRange(minX, minY, max_X, maxY);
+            await _unitOfWork.CommitAsync();  
             return response;
         }
 
         [HttpDelete("name/{name}")]
-        public Task<Response> DeleteByName([FromRoute] string name)
+        public async Task<Response> DeleteByName([FromRoute] string name)
         {
-            var response = _pointService.DeleteByName(name);
+            var response = await _pointService.DeleteByName(name);
+            await _unitOfWork.CommitAsync();  
             return response;
         }
 
         [HttpDelete("{id}")]
-        public Task<Response> DeleteById([FromRoute] int id)
+        public async Task<Response> DeleteById([FromRoute] int id)
         {
-            var response = _pointService.DeleteById(id);
+            var response = await _pointService.DeleteById(id);
+            await _unitOfWork.CommitAsync();  
             return response;
         }
-
     }
 }
