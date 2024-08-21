@@ -26,6 +26,7 @@
         <div class="buttons">
           <button class="btn add-point-btn">Add Point</button>
           <button class="btn real-query-btn">Query</button>
+          <button class="btn polygon-actions">Polygon Actions</button>
           <button class="btn query-btn">Custom Functions</button>
         </div>
       </div>
@@ -56,6 +57,7 @@
         >
           <img src="/assets/dragandupdate.png" alt="drag and update points" />
         </button>
+        <div></div>
         <button
           id="draw-polygon-btn"
           title="draw polygon button"
@@ -101,6 +103,21 @@
                 <th>Name</th>
                 <th>X Coordinate</th>
                 <th>Y Coordinate</th>
+                <th>Options</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="form-section" id="polygon-actions-form">
+          <table id="polygon-query-table" class="display">
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Description</th>
                 <th>Options</th>
               </tr>
             </thead>

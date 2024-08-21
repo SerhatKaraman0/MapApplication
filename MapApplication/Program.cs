@@ -18,6 +18,14 @@ builder.Services.AddScoped<IPointService, PointService>();  // Register PointSer
 builder.Services.AddScoped<IResponseService, ResponseService>();  // Register ResponseService as IResponseService
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IWktService, WktService>();
+builder.Services.AddScoped<IWktResponseService, WktResponseService>();
+builder.Services.AddScoped<ITabService, TabService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserResponseService, UserResponseService>();
+builder.Services.AddScoped<IFeatureService, FeatureService>();
+builder.Services.AddScoped<IFeatureResponseService, FeatureResponseService>();
+
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

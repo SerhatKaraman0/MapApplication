@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MapApplication.Data;
 using MapApplication.Interfaces;
 using MapApplication.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MapApplication.Services
 {
@@ -12,19 +13,21 @@ namespace MapApplication.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IResponseService _responseService;
+        private readonly AppDbContext _context;
 
-        public PointService(IUnitOfWork unitOfWork, IResponseService responseService)
+        public PointService(IUnitOfWork unitOfWork, IResponseService responseService, AppDbContext context)
         {
             _unitOfWork = unitOfWork;
             _responseService = responseService;
+            _context = context;
         }
 
         // GET Requests
-        public async Task<Response> GetAll()
+        public async Task<Response> GetAll(int ownerId)
         {
             try
             {
-                var points = await _unitOfWork.Points.GetAllAsync();
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId);
                 if (points.success)
                 {
                     return _responseService.SuccessResponse(points.point, "Points retrieved successfully.", true);
@@ -37,11 +40,11 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> GetById(int id)
+        public async Task<Response> GetById(int ownerId, int id)
         {
             try
             {
-                var point = await _unitOfWork.Points.GetByIdAsync(id);
+                var point = await _unitOfWork.Points.FindAsync(p => p.Id == id && p.OwnerId == ownerId);
                 if (point.success)
                 {
                     return _responseService.SuccessResponse(point.point, $"Point with id: {id} retrieved successfully.", true);
@@ -54,11 +57,11 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> GetPointsCount()
+        public async Task<Response> GetPointsCount(int ownerId)
         {
             try
             {
-                var points = await _unitOfWork.Points.GetAllAsync();
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId);
                 if (points.success)
                 {
                     var count = ((List<PointDb>)points.point).Count;
@@ -72,11 +75,11 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> SearchPointsByCoordinates(double X, double Y, double range)
+        public async Task<Response> SearchPointsByCoordinates(int ownerId, double X, double Y, double range)
         {
             try
             {
-                var points = await _unitOfWork.Points.FindAsync(p => Math.Sqrt(Math.Pow(p.X_coordinate - X, 2) + Math.Pow(p.Y_coordinate - Y, 2)) <= range);
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId && Math.Sqrt(Math.Pow(p.X_coordinate - X, 2) + Math.Pow(p.Y_coordinate - Y, 2)) <= range);
                 if (points.success)
                 {
                     return _responseService.SuccessResponse(points.point, $"{((List<PointDb>)points.point).Count} points found within the range.", true);
@@ -89,11 +92,11 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> GetPointsInRadius(double centerX, double centerY, double radius)
+        public async Task<Response> GetPointsInRadius(int ownerId, double centerX, double centerY, double radius)
         {
             try
             {
-                var points = await _unitOfWork.Points.FindAsync(p => Math.Sqrt(Math.Pow(centerX - p.X_coordinate, 2) + Math.Pow(centerY - p.Y_coordinate, 2)) <= radius);
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId && Math.Sqrt(Math.Pow(centerX - p.X_coordinate, 2) + Math.Pow(centerY - p.Y_coordinate, 2)) <= radius);
                 if (points.success)
                 {
                     return _responseService.SuccessResponse(points.point, $"{((List<PointDb>)points.point).Count} points found within the radius.", true);
@@ -106,11 +109,11 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> GetNearestPoint(double X, double Y)
+        public async Task<Response> GetNearestPoint(int ownerId, double X, double Y)
         {
             try
             {
-                var points = await _unitOfWork.Points.GetAllAsync();
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId);
                 if (points.success)
                 {
                     var nearestPoint = ((List<PointDb>)points.point)
@@ -130,12 +133,12 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> Distance(string pointName1, string pointName2)
+        public async Task<Response> Distance(int ownerId, string pointName1, string pointName2)
         {
             try
             {
-                var point1 = await _unitOfWork.Points.FindAsync(p => p.Name == pointName1);
-                var point2 = await _unitOfWork.Points.FindAsync(p => p.Name == pointName2);
+                var point1 = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId && p.Name == pointName1);
+                var point2 = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId && p.Name == pointName2);
 
                 if (point1.success && point2.success)
                 {
@@ -157,7 +160,7 @@ namespace MapApplication.Services
         }
 
         // POST Requests
-        public async Task<Response> GeneratePoints()
+        public async Task<Response> GeneratePoints(int ownerId)
         {
             try
             {
@@ -176,11 +179,15 @@ namespace MapApplication.Services
                     {
                         X_coordinate = rnd.Next(2800000, 4970000),
                         Y_coordinate = rnd.Next(4100000, 5199000),
-                        Name = cities[i]
+                        Name = cities[i],
+                        Date = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
+                        OwnerId = ownerId
                     };
                     newPoints.Add(item);
                 }
 
+                var user = await _context.Users.FindAsync(ownerId);
+                user.UserPoints.AddRange(newPoints);
                 await _unitOfWork.Points.AddRangeAsync(newPoints);
                 await _unitOfWork.CommitAsync(); // Commit the transaction
                 return _responseService.SuccessResponse(newPoints, "10 Points generated successfully.", true);
@@ -191,10 +198,12 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> Add(PointDb point)
+        public async Task<Response> Add(int ownerId, PointDb point)
         {
             try
             {
+                point.Date = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+                point.OwnerId = ownerId;
                 var result = await _unitOfWork.Points.AddAsync(point);
                 if (result.success)
                 {
@@ -209,11 +218,11 @@ namespace MapApplication.Services
         }
 
         // PUT Requests
-        public async Task<Response> Update(int id, PointDb updatedPoint)
+        public async Task<Response> Update(int ownerId, int id, PointDb updatedPoint)
         {
             try
             {
-                var point = await _unitOfWork.Points.GetByIdAsync(id);
+                var point = await _unitOfWork.Points.FindAsync(p => p.Id == id && p.OwnerId == ownerId);
                 if (point.success)
                 {
                     var existingPoint = ((List<PointDb>)point.point).FirstOrDefault();
@@ -222,6 +231,7 @@ namespace MapApplication.Services
                         existingPoint.X_coordinate = updatedPoint.X_coordinate;
                         existingPoint.Y_coordinate = updatedPoint.Y_coordinate;
                         existingPoint.Name = updatedPoint.Name;
+                        existingPoint.Date = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
                         var result = await _unitOfWork.Points.UpdateAsync(existingPoint);
                         if (result.success)
                         {
@@ -229,37 +239,7 @@ namespace MapApplication.Services
                         }
                         return result;
                     }
-                    return _responseService.ErrorResponse(new List<PointDb>(), $"Point with id {id} not found.", false);
-                }
-                return _responseService.ErrorResponse(new List<PointDb>(), point.ResponseMessage, false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error updating point: {ex.Message}", false);
-            }
-        }
-
-        public async Task<Response> UpdateByName(string Name, PointDb updatedPoint)
-        {
-            try
-            {
-                var point = await _unitOfWork.Points.FindAsync(p => p.Name == Name);
-                if (point.success)
-                {
-                    var existingPoint = ((List<PointDb>)point.point).FirstOrDefault();
-                    if (existingPoint != null)
-                    {
-                        existingPoint.X_coordinate = updatedPoint.X_coordinate;
-                        existingPoint.Y_coordinate = updatedPoint.Y_coordinate;
-                        existingPoint.Name = updatedPoint.Name;
-                        var result = await _unitOfWork.Points.UpdateAsync(existingPoint);
-                        if (result.success)
-                        {
-                            await _unitOfWork.CommitAsync(); // Commit the transaction
-                        }
-                        return result;
-                    }
-                    return _responseService.ErrorResponse(new List<PointDb>(), $"Point with name {Name} not found.", false);
+                    return _responseService.ErrorResponse(new List<PointDb>(), "Point not found", false);
                 }
                 return _responseService.ErrorResponse(new List<PointDb>(), point.ResponseMessage, false);
             }
@@ -270,11 +250,11 @@ namespace MapApplication.Services
         }
 
         // DELETE Requests
-        public async Task<Response> DeleteById(int id)
+        public async Task<Response> Delete(int ownerId, int id)
         {
             try
             {
-                var point = await _unitOfWork.Points.GetByIdAsync(id);
+                var point = await _unitOfWork.Points.FindAsync(p => p.Id == id && p.OwnerId == ownerId);
                 if (point.success)
                 {
                     var existingPoint = ((List<PointDb>)point.point).FirstOrDefault();
@@ -287,21 +267,21 @@ namespace MapApplication.Services
                         }
                         return result;
                     }
-                    return _responseService.ErrorResponse(new List<PointDb>(), $"Point with id {id} not found.", false);
+                    return _responseService.ErrorResponse(new List<PointDb>(), "Point not found", false);
                 }
                 return _responseService.ErrorResponse(new List<PointDb>(), point.ResponseMessage, false);
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error deleting point by id: {ex.Message}", false);
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Error deleting point: {ex.Message}", false);
             }
         }
 
-        public async Task<Response> DeleteByName(string name)
+        public async Task<Response> DeleteById(int ownerId, int id)
         {
             try
             {
-                var point = await _unitOfWork.Points.FindAsync(p => p.Name == name);
+                var point = await _unitOfWork.Points.FindAsync(p => p.Id == id && p.OwnerId == ownerId);
                 if (point.success)
                 {
                     var existingPoint = ((List<PointDb>)point.point).FirstOrDefault();
@@ -311,35 +291,98 @@ namespace MapApplication.Services
                         if (result.success)
                         {
                             await _unitOfWork.CommitAsync(); // Commit the transaction
+                            return _responseService.SuccessResponse(new List<PointDb> { existingPoint }, "Point deleted successfully.", true);
                         }
-                        return result;
                     }
-                    return _responseService.ErrorResponse(new List<PointDb> { }, $"Point with name {name} not found.", false);
+                    return _responseService.ErrorResponse(new List<PointDb>(), "Point not found", false);
                 }
-                return _responseService.ErrorResponse(new List<PointDb> { }, point.ResponseMessage, false);
+                return _responseService.ErrorResponse(new List<PointDb>(), point.ResponseMessage, false);
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<PointDb> { }, $"Error deleting point by name: {ex.Message}", false);
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Error deleting point: {ex.Message}", false);
             }
         }
 
-        public async Task<Response> DeleteAll()
+        public async Task<Response> DeleteByName(int ownerId, string name)
         {
             try
             {
-                var points = await _unitOfWork.Points.GetAllAsync();
+                var points = await _unitOfWork.Points.FindAsync(p => p.Name == name && p.OwnerId == ownerId);
                 if (points.success)
                 {
-                    var allPoints = (List<PointDb>)points.point;
-                    var result = await _unitOfWork.Points.DeleteRangeAsync(allPoints);
-                    if (result.success)
+                    var pointsToRemove = ((List<PointDb>)points.point);
+                    if (pointsToRemove.Any())
                     {
-                        await _unitOfWork.CommitAsync(); 
+                        foreach (var point in pointsToRemove)
+                        {
+                            await _unitOfWork.Points.DeleteAsync(point.Id);
+                        }
+                        await _unitOfWork.CommitAsync(); // Commit the transaction
+                        return _responseService.SuccessResponse(pointsToRemove, "Points deleted successfully.", true);
                     }
-                    return result;
+                    return _responseService.ErrorResponse(new List<PointDb>(), "No points found with the specified name.", false);
                 }
-                return _responseService.ErrorResponse(new List<PointDb>(), "Error deleting all points", false);
+                return _responseService.ErrorResponse(new List<PointDb>(), points.ResponseMessage, false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Error deleting points: {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> UpdateByName(int ownerId, string name, PointDb updatedPoint)
+        {
+            try
+            {
+                var points = await _unitOfWork.Points.FindAsync(p => p.Name == name && p.OwnerId == ownerId);
+                if (points.success)
+                {
+                    var pointsToUpdate = ((List<PointDb>)points.point);
+                    if (pointsToUpdate.Any())
+                    {
+                        foreach (var point in pointsToUpdate)
+                        {
+                            point.X_coordinate = updatedPoint.X_coordinate;
+                            point.Y_coordinate = updatedPoint.Y_coordinate;
+                            point.Name = updatedPoint.Name;
+                            point.Date = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+                            await _unitOfWork.Points.UpdateAsync(point);
+                        }
+                        await _unitOfWork.CommitAsync(); // Commit the transaction
+                        return _responseService.SuccessResponse(pointsToUpdate, "Points updated successfully.", true);
+                    }
+                    return _responseService.ErrorResponse(new List<PointDb>(), "No points found with the specified name.", false);
+                }
+                return _responseService.ErrorResponse(new List<PointDb>(), points.ResponseMessage, false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Error updating points: {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> DeleteAll(int ownerId)
+        {
+            try
+            {
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId);
+                if (points.success)
+                {
+                    var pointsToRemove = ((List<PointDb>)points.point);
+                    if (pointsToRemove.Any())
+                    {
+                        foreach (var point in pointsToRemove)
+                        {
+                            await _unitOfWork.Points.DeleteAsync(point.Id);
+                        }
+                        await _unitOfWork.CommitAsync(); // Commit the transaction
+                        return _responseService.SuccessResponse(pointsToRemove, "All points deleted successfully.", true);
+                    }
+                    return _responseService.ErrorResponse(new List<PointDb>(), "No points found.", false);
+                }
+                return _responseService.ErrorResponse(new List<PointDb>(), points.ResponseMessage, false);
             }
             catch (Exception ex)
             {
@@ -347,24 +390,26 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> DeleteInRange(double minX, double minY, double max_X, double maxY)
+        public async Task<Response> DeleteInRange(int ownerId, double minX, double minY, double maxX, double maxY)
         {
             try
             {
-                var points = await _unitOfWork.Points.FindAsync(p => (minX <= p.X_coordinate) && (minY <= p.Y_coordinate) && (p.X_coordinate <= max_X) && (p.Y_coordinate <= maxY));
+                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId &&
+                    p.X_coordinate >= minX && p.X_coordinate <= maxX &&
+                    p.Y_coordinate >= minY && p.Y_coordinate <= maxY);
                 if (points.success)
                 {
-                    var pointsInRange = (List<PointDb>)points.point;
-                    var initialLength = pointsInRange.Count;
-                    var result = await _unitOfWork.Points.DeleteRangeAsync(pointsInRange);
-                    if (result.success)
+                    var pointsToRemove = ((List<PointDb>)points.point);
+                    if (pointsToRemove.Any())
                     {
+                        foreach (var point in pointsToRemove)
+                        {
+                            await _unitOfWork.Points.DeleteAsync(point.Id);
+                        }
                         await _unitOfWork.CommitAsync(); // Commit the transaction
-                        var remainingLength = pointsInRange.Count;
-                        var deletedCount = initialLength - remainingLength;
-                        return _responseService.SuccessResponse(new List<PointDb>(), $"{deletedCount} Points deleted successfully", true);
+                        return _responseService.SuccessResponse(pointsToRemove, "Points in range deleted successfully.", true);
                     }
-                    return _responseService.ErrorResponse(new List<PointDb>(), "Error deleting points in range", false);
+                    return _responseService.ErrorResponse(new List<PointDb>(), "No points found in the specified range.", false);
                 }
                 return _responseService.ErrorResponse(new List<PointDb>(), points.ResponseMessage, false);
             }
@@ -372,6 +417,79 @@ namespace MapApplication.Services
             {
                 return _responseService.ErrorResponse(new List<PointDb>(), $"Error deleting points in range: {ex.Message}", false);
             }
+        }
+
+        public async Task<Response> GetFeatureById(int ownerId, int featureId)
+        {
+            try
+            {
+                var feature = await _context.Features
+                    .Where(f => f.FeatureId == featureId && f.OwnerId == ownerId)
+                    .FirstOrDefaultAsync();
+
+                if (feature != null)
+                {
+                    return _responseService.SuccessResponse(new List<PointDb>(), $"Feature with ID {featureId} retrieved successfully.", true);
+                }
+                return _responseService.ErrorResponse(new List<FeatureDb>(), "Feature not found", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<FeatureDb>(), $"Error retrieving feature: {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> UpdateFeatureById(int ownerId, int featureId, FeatureDb updatedFeature)
+        {
+            try
+            {
+                var feature = await _context.Features
+                    .Where(f => f.FeatureId == featureId && f.OwnerId == ownerId)
+                    .FirstOrDefaultAsync();
+
+                if (feature != null)
+                {
+                    feature.FeatureName = updatedFeature.FeatureName;
+                    feature.FeatureData = updatedFeature.FeatureData;
+                    feature.createdDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+                    _context.Features.Update(feature);
+                    await _context.SaveChangesAsync(); // Commit the transaction
+                    return _responseService.SuccessResponse(new List<PointDb>(), $"Feature with ID {featureId} updated successfully.", true);
+                }
+                return _responseService.ErrorResponse(new List<FeatureDb>(), "Feature not found", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<FeatureDb>(), $"Error updating feature: {ex.Message}", false);
+            }
+        }
+
+        public async Task<Response> DeleteFeatureById(int ownerId, int featureId)
+        {
+            try
+            {
+                var feature = await _context.Features
+                    .Where(f => f.FeatureId == featureId && f.OwnerId == ownerId)
+                    .FirstOrDefaultAsync();
+
+                if (feature != null)
+                {
+                    _context.Features.Remove(feature);
+                    await _context.SaveChangesAsync(); // Commit the transaction
+                    return _responseService.SuccessResponse(new List<PointDb>(), $"Feature with ID {featureId} deleted successfully.", true);
+                }
+                return _responseService.ErrorResponse(new List<FeatureDb>(), "Feature not found", false);
+            }
+            catch (Exception ex)
+            {
+                return _responseService.ErrorResponse(new List<FeatureDb>(), $"Error deleting feature: {ex.Message}", false);
+            }
+        }
+
+        public Task<Response> UpdateFeatureById(int ownerId, int featureId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

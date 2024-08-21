@@ -2,6 +2,7 @@
 
 html,
 body {
+  height: 100%;
   margin: 0;
   font-family: Arial, sans-serif;
   height: 100%;
@@ -75,7 +76,7 @@ body {
   top: 0;
   right: 0;
   background-color: white;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto; /* Add vertical scrolling */
   transition: 0.5s;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
@@ -343,6 +344,69 @@ body.sidebar-open #map {
   width: 23px;
   height: 23px;
 }
+
+.photo-div {
+  width: fit-content;
+}
+
+.photo-div-img {
+  width: 110px;
+}
+/*polygon quey btns */
+
+.polygon-query-table-btn.view {
+  margin: 2px;
+  color: transparent;
+  border: 1px solid black;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.polygon-query-table-btn.view:hover {
+  background-color: rgb(0, 122, 255);
+}
+
+.polygon-query-table-btn.update {
+  margin: 2px;
+  color: transparent;
+  border: 1px solid black;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.polygon-query-table-btn.update:hover {
+  background-color: rgb(34, 193, 34);
+}
+
+.polygon-query-table-btn.delete {
+  margin: 2px;
+  color: transparent;
+  border: 1px solid black;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+.polygon-query-table-btn.delete:hover {
+  background-color: rgb(213, 115, 115);
+}
+
+.polygon-query-row-btn-group {
+  display: flex;
+  flex-direction: row;
+}
+
+.polygon-query-table-btn-img {
+  width: 23px;
+  height: 23px;
+}
+
+/**/
 .expand-button {
   position: fixed;
   bottom: 20px;
@@ -397,22 +461,10 @@ body.sidebar-open #map {
   height: 40px; /* Adjust as needed */
 }
 
-.drag-and-update-btn.active {
-  background-color: rgb(230, 116, 116);
-}
-
-.draw-polygon-btn.active {
-  background-color: rgb(230, 116, 116);
-}
-
-.draw-circle-btn.active {
-  background-color: rgb(230, 116, 116);
-}
-
-.add-point-btn.active {
-  background-color: rgb(230, 116, 116);
-}
-
+.drag-and-update-btn.active,
+.draw-polygon-btn.active,
+.draw-circle-btn.active,
+.add-point-btn.active,
 .draw-line-btn.active {
   background-color: rgb(230, 116, 116);
 }

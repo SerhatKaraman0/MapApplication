@@ -13,123 +13,163 @@ namespace MapApplication.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPointService _pointService;
+        private readonly IWktService _wktService;
 
-        public ValuesController(IUnitOfWork unitOfWork, IPointService pointService)
+        public ValuesController(IUnitOfWork unitOfWork, IPointService pointService, IWktService wktService)
         {
             _unitOfWork = unitOfWork;
             _pointService = pointService;
+            _wktService = wktService;
         }
 
-        [HttpGet("generate")]
-        public Task<Response> GeneratePoints()
+        [HttpGet("{ownerId}/generate")]
+        public Task<Response> GeneratePoints([FromRoute] int ownerId)
         {
-            var response = _pointService.GeneratePoints();
+            var response = _pointService.GeneratePoints(ownerId);
             return response;
         }
 
-        [HttpGet]
-        public Task<Response> GetAll()
+        [HttpGet("{ownerId}/getAll")]
+        public Task<Response> GetAll([FromRoute] int ownerId)
         {
-            var response = _pointService.GetAll();
+            var response = _pointService.GetAll(ownerId);
             return response;
         }
 
-        [HttpGet("{id}")]
-        public Task<Response> GetById([FromRoute] int id)
+        [HttpGet("{ownerId}/point/{id}")]
+        public Task<Response> GetById([FromRoute] int ownerId, [FromRoute] int id)
         {
-            var response = _pointService.GetById(id);
+            var response = _pointService.GetById(ownerId, id);
             return response;
         }
 
-        [HttpGet("pointsInRadius")]
-        public Task<Response> GetPointsInRadius(double circleX, double circleY, double radius)
+        [HttpGet("{ownerId}/pointsInRadius")]
+        public Task<Response> GetPointsInRadius([FromRoute] int ownerId, double circleX, double circleY, double radius)
         {
-            var response = _pointService.GetPointsInRadius(circleX, circleY, radius);
+            var response = _pointService.GetPointsInRadius(ownerId, circleX, circleY, radius);
             return response;
         }
 
-        [HttpGet("getNearestPoint")]
-        public Task<Response> GetNearestPoint(double X, double Y)
+        [HttpGet("{ownerId}/getNearestPoint")]
+        public Task<Response> GetNearestPoint([FromRoute] int ownerId, double X, double Y)
         {
-            var response = _pointService.GetNearestPoint(X, Y);
+            var response = _pointService.GetNearestPoint(ownerId, X, Y);
             return response;
         }
 
-        [HttpGet("search")]
-        public Task<Response> SearchPointsByCoordinates([FromQuery] int x, [FromQuery] int y, [FromQuery] int range)
+        [HttpGet("{ownerId}/search")]
+        public Task<Response> SearchPointsByCoordinates([FromRoute] int ownerId, [FromQuery] int x, [FromQuery] int y, [FromQuery] int range)
         {
-            var response = _pointService.SearchPointsByCoordinates(x, y, range);
+            var response = _pointService.SearchPointsByCoordinates(ownerId, x, y, range);
             return response;
         }
 
-        [HttpGet("count")]
-        public Task<Response> GetPointsCount()
+        [HttpGet("{ownerId}/count")]
+        public Task<Response> GetPointsCount([FromRoute] int ownerId)
         {
-            var response = _pointService.GetPointsCount();
+            var response = _pointService.GetPointsCount(ownerId);
             return response;
         }
 
-        [HttpGet("distance")]
-        public Task<Response> Distance(string pointName1, string pointName2)
+        [HttpGet("{ownerId}/distance")]
+        public Task<Response> Distance([FromRoute] int ownerId, string pointName1, string pointName2)
         {
-            var response = _pointService.Distance(pointName1, pointName2);
+            var response = _pointService.Distance(ownerId, pointName1, pointName2);
             return response;
         }
 
-        [HttpPost]
-        public async Task<Response> Add(PointDb point)
+        [HttpPost("{ownerId}/add")]
+        public async Task<Response> Add([FromRoute] int ownerId, PointDb point)
         {
-            var response = await _pointService.Add(point);
+            var response = await _pointService.Add(ownerId, point);
             await _unitOfWork.CommitAsync();  
             return response;
         }
 
-        [HttpPut("{id}")]
-        public async Task<Response> Update([FromRoute] int id, [FromBody] PointDb updatedPoint)
+        [HttpPut("{ownerId}/point/{id}")]
+        public async Task<Response> Update([FromRoute] int ownerId, [FromRoute] int id, [FromBody] PointDb updatedPoint)
         {
-            var response = await _pointService.Update(id, updatedPoint);
+            var response = await _pointService.Update(ownerId, id, updatedPoint);
             await _unitOfWork.CommitAsync();  
             return response;
         }
 
-        [HttpPut("updateByName/{name}")]
-        public async Task<Response> UpdateByName([FromRoute] string name, [FromBody] PointDb updatedPoint)
+        [HttpPut("{ownerId}/updateByName/{name}")]
+        public async Task<Response> UpdateByName([FromRoute] int ownerId, [FromRoute] string name, [FromBody] PointDb updatedPoint)
         {
-            var response = await _pointService.UpdateByName(name, updatedPoint);
+            var response = await _pointService.UpdateByName(ownerId, name, updatedPoint);
             await _unitOfWork.CommitAsync(); 
             return response;
         }
 
-        [HttpDelete("all")]
-        public async Task<Response> DeleteAll()
+        [HttpDelete("{ownerId}/all")]
+        public async Task<Response> DeleteAll([FromRoute] int ownerId)
         {
-            var response = await _pointService.DeleteAll();
+            var response = await _pointService.DeleteAll(ownerId);
             await _unitOfWork.CommitAsync();  
             return response;
         }
 
-        [HttpDelete("deleteByRange")]
-        public async Task<Response> DeleteInRange(double minX, double minY, double max_X, double maxY)
+        [HttpDelete("{ownerId}/deleteByRange")]
+        public async Task<Response> DeleteInRange([FromRoute] int ownerId, double minX, double minY, double max_X, double maxY)
         {
-            var response = await _pointService.DeleteInRange(minX, minY, max_X, maxY);
+            var response = await _pointService.DeleteInRange(ownerId, minX, minY, max_X, maxY);
             await _unitOfWork.CommitAsync();  
             return response;
         }
 
-        [HttpDelete("name/{name}")]
-        public async Task<Response> DeleteByName([FromRoute] string name)
+        [HttpDelete("{ownerId}/name/{name}")]
+        public async Task<Response> DeleteByName([FromRoute] int ownerId, [FromRoute] string name)
         {
-            var response = await _pointService.DeleteByName(name);
+            var response = await _pointService.DeleteByName(ownerId, name);
             await _unitOfWork.CommitAsync();  
             return response;
         }
 
-        [HttpDelete("{id}")]
-        public async Task<Response> DeleteById([FromRoute] int id)
+        [HttpDelete("{ownerId}/point/{id}")]
+        public async Task<Response> DeleteById([FromRoute] int ownerId, [FromRoute] int id)
         {
-            var response = await _pointService.DeleteById(id);
+            var response = await _pointService.DeleteById(ownerId, id);
             await _unitOfWork.CommitAsync();  
             return response;
         }
+
+        // Wkt endpoints
+
+        [HttpGet("{ownerId}/wkt/all")]
+        public async Task<WktResponse> GetAllWkt([FromRoute] int ownerId) {
+            var response = await _wktService.GetAllWkt(ownerId);
+            return response;
+        }
+
+        [HttpGet("{ownerId}/wkt/{id}")]
+        public async Task<WktResponse> GetWktById([FromRoute] int ownerId, [FromRoute] int id) {
+            var response = await _wktService.GetWktById(ownerId, id);
+            return response;
+        }
+
+        [HttpPost("{ownerId}/wkt/create")]
+        public async Task<WktResponse> AddWkt([FromRoute] int ownerId, WktDb wkt) {
+            var response = await _wktService.CreateWkt(ownerId, wkt);
+            return response;
+        }
+
+        [HttpPut("{ownerId}/wkt/update/{id}")]
+        public async Task<WktResponse> UpdateWkt([FromRoute] int ownerId, [FromRoute] int id, [FromBody] WktDb wkt)
+        {
+            var response = await _wktService.UpdateWkt(ownerId, id, wkt);
+            return response;
+        }
+
+        [HttpDelete("{ownerId}/wkt/delete/{id}")]
+        public async Task<WktResponse> DeleteWkt([FromRoute] int ownerId, [FromRoute] int id)
+        {
+            var response = await _wktService.DeleteWktById(ownerId, id);
+            return response;
+        }
+
+
+
     }
 }
+

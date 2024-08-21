@@ -7,12 +7,15 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "vite": "^5.3.3"
+    "vite": "^5.4.0"
   },
   "dependencies": {
+    "@mapbox/mapbox-sdk": "^0.16.0",
+    "axios": "^1.7.3",
     "datatables.net-dt": "^2.1.2",
     "jquery": "^3.7.1",
     "jspanel4": "^4.16.1",
+    "node-fetch": "^3.3.2",
     "ol": "latest",
     "pg": "^8.12.0"
   }

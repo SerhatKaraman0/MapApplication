@@ -16,6 +16,10 @@ import $ from "jquery";
 import { fromLonLat } from "ol/proj.js";
 import { jsPanel } from "jspanel4";
 import Draw from "ol/interaction/Draw.js";
+import { LineString } from "ol/geom.js";
+import WKT from "ol/format/WKT.js";
+import * as WktApi from "./wkt_api.js";
+import * as ImageApi from "./image_api.js";
 
 // script.js
 const selectedAction = [];
@@ -116,6 +120,10 @@ const markerLayer = new VectorLayer({
   }),
 });
 
+const polygonLayer = new VectorLayer({
+  source: new VectorSource({ wrapX: false }),
+});
+
 const selectedPointLayer = new VectorLayer({
   source: new VectorSource(),
   style: new Style({
@@ -135,6 +143,7 @@ const map = new Map({
       source: new OSM(),
     }),
     markerLayer,
+    polygonLayer,
   ],
   view: new View({
     center: centerCoordinates,
@@ -170,6 +179,28 @@ function closeSidebarFunction() {
   setTimeout(() => map.updateSize(), 500);
 }
 
+async function createAllPolygonMarkers() {
+  const response = await WktApi.getAllWkt();
+  const format = new WKT();
+
+  let feature;
+  let wktArr = [];
+  await Promise.all(
+    response.wkt.map((shape) => {
+      feature = format.readFeature(shape.wkt, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:4326",
+      });
+      wktArr.push(feature);
+    })
+  );
+  polygonLayer.getSource().addFeatures(wktArr);
+}
+
+function clearPolygonMarkers() {
+  polygonLayer.getSource().clear();
+}
+
 function createTemporaryMarker(coordinate) {
   const tempFeature = new Feature({
     geometry: new Point(coordinate),
@@ -183,6 +214,7 @@ function createSavedMarker(coordinates, name, id) {
   const savedFeature = new Feature({
     geometry: new Point(coordinates),
   });
+  const featureCollection = new Collection(markers);
 
   savedFeature.setId(id); // Set a unique ID for the feature
   savedFeature.set("class", "saved");
@@ -443,12 +475,287 @@ function deleteHtmlElement(id) {
   const element = document.querySelector(id);
   element.remove();
 }
+// Polygon table functions
+
+async function panAndZoomToPolygon(
+  id,
+  centerCoordinates,
+  zoomLevel = 14,
+  duration = 2000
+) {
+  // Retrieve the view from the map object
+  const view = map.getView();
+
+  try {
+    // Get the point data
+    const polygon = await WktApi.getWktById(id);
+
+    if (
+      !(
+        centerCoordinates[0] === 3917151.932317253 &&
+        centerCoordinates[1] === 4770232.626187268
+      )
+    ) {
+      const MapCenterCoordinates = [3917151.932317253, 4770232.626187268];
+
+      // Animate to initial center
+      const format = new WKT();
+      const polygonGeometry = format
+        .readFeature(polygon.wkt[0].wkt)
+        .getGeometry();
+
+      const extent = polygonGeometry.getExtent();
+
+      view.fit(extent, {
+        size: map.getSize(),
+        duration: duration,
+        maxZoom: zoomLevel,
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching point data:", error);
+  }
+}
+
+window.panAndZoomToPolygon = panAndZoomToPolygon;
+
+function parsePolygonString(polygonStr) {
+  console.log(polygonStr[0].wkt);
+  // Extract the coordinates part from the POLYGON string
+  const coordinatesStr = polygonStr[0].wkt.match(/\(\((.+?)\)\)/)[1];
+
+  // Split the coordinates string into individual pairs
+  const coordinatePairs = coordinatesStr.split(",");
+
+  // Convert each pair into an array of [x, y]
+  const coordinatesArray = coordinatePairs.map((pair) => {
+    const [x, y] = pair.trim().split(" ").map(Number);
+    return [x, y];
+  });
+
+  return coordinatesArray;
+}
+
+async function updatePolygonTableEntry(id) {
+  const wkt = await WktApi.getWktById(id);
+  const coordinatesArr = parsePolygonString(wkt.wkt);
+
+  const centerOfPolygon = calculatePolygonCentroid(coordinatesArr)[0];
+
+  await panAndZoomToPolygon(id, centerOfPolygon, 14, 2000);
+
+  if (window.currentPanel) {
+    window.currentPanel.close();
+  }
+
+  const view = map.getView();
+
+  function createPanel() {
+    window.currentPanel = jsPanel.create({
+      headerTitle: `Update Polygon: ${id}`,
+      contentSize: "400 350",
+      content: `
+        <div style="padding: 10px;">
+          <div style="margin-bottom: 10px;">
+            <label for="update-polygon-name" style="display: block; font-weight: bold; margin-bottom: 5px;">Name:</label>
+            <input type="text" id="update-polygon-name" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" />
+          </div>
+          <div style="margin-bottom: 10px;">
+            <label for="update-polygon-description" style="display: block; font-weight: bold; margin-bottom: 5px;">Description:</label>
+            <input type="text" id="update-polygon-description" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" />
+          </div>
+          <div style="margin-bottom: 10px;">
+            <label for="update-polygon-color" style="display: block; font-weight: bold; margin-bottom: 5px;">Choose color:</label>
+            <input type="color" id="update-polygon-color" value="#ff0000" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" />
+          </div>
+          <button class="btn save-btn" id="update-polygon-btn-popup" style="width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Apply</button>
+        </div>
+      `,
+      position: "center-top 0 400",
+      theme: "dark",
+      callback: function (panel) {
+        document
+          .querySelector("#update-polygon-btn-popup")
+          .addEventListener("click", async () => {
+            const polygonName = document.querySelector(
+              "#update-polygon-name"
+            ).value;
+            const polygonDescription = document.querySelector(
+              "#update-polygon-description"
+            ).value;
+            const polygonColor = document.querySelector(
+              "#update-polygon-color"
+            ).value;
+
+            const response = await WktApi.updateWkt(
+              id,
+              polygonName,
+              polygonDescription,
+              "undefined",
+              "undefined",
+              polygonColor
+            );
+
+            $("#polygon-query-table").DataTable().ajax.reload(null, false);
+          });
+      },
+    });
+  }
+
+  function onAnimationEnd() {
+    createPanel();
+    view.un("change:center", onAnimationEnd);
+    view.un("change:resolution", onAnimationEnd);
+  }
+
+  view.on("change:center", onAnimationEnd);
+  view.on("change:resolution", onAnimationEnd);
+}
+
+window.updatePolygonTableEntry = updatePolygonTableEntry;
+
+async function deleteFromPolygonTable(id) {
+  const response = await WktApi.deleteWkt(id);
+  $("#polygon-query-table").DataTable().ajax.reload(null, false);
+}
+
+window.deleteFromPolygonTable = deleteFromPolygonTable;
 
 useClickedCoordinates();
+
+function calculateRingCentroid(coordinates) {
+  if (coordinates.length < 3) return { area: 0, cx: 0, cy: 0 }; // Not enough points
+
+  var n = coordinates.length;
+  var ringArea = 0;
+  var ringCx = 0;
+  var ringCy = 0;
+
+  for (var i = 0; i < n - 1; i++) {
+    var x0 = coordinates[i][0];
+    var y0 = coordinates[i][1];
+    var x1 = coordinates[i + 1][0];
+    var y1 = coordinates[i + 1][1];
+
+    var a = x0 * y1 - x1 * y0;
+    ringArea += a;
+    ringCx += (x0 + x1) * a;
+    ringCy += (y0 + y1) * a;
+  }
+
+  ringArea *= 0.5;
+  if (ringArea === 0) return { area: 0, cx: 0, cy: 0 }; // Avoid division by zero
+
+  ringCx /= 6 * ringArea;
+  ringCy /= 6 * ringArea;
+
+  return { area: ringArea, cx: ringCx, cy: ringCy };
+}
+
+window.calculateRingCentroid = calculateRingCentroid;
+
+// Function to convert Web Mercator to latitude and longitude
+function mercatorToLatLon(x, y) {
+  var lon = (x * 180) / 20037508.34;
+  var lat = (y * 180) / 20037508.34;
+  lat =
+    (180 / Math.PI) *
+    (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2);
+  return [lon, lat];
+}
+
+window.mercatorToLatLon = mercatorToLatLon;
+
+// Example of processing multiple rings
+function calculatePolygonCentroid(rings) {
+  var totalArea = 0;
+  var cx = 0;
+  var cy = 0;
+
+  // Iterate through each ring
+  for (var i = 0; i < rings.length; i++) {
+    var ringCoordinates = rings[i];
+    var result = calculateRingCentroid(ringCoordinates);
+
+    // If it's a hole (negative area), subtract it
+    if (result.area < 0) {
+      totalArea -= result.area;
+      cx -= result.cx * result.area;
+      cy -= result.cy * result.area;
+    } else {
+      totalArea += result.area;
+      cx += result.cx * result.area;
+      cy += result.cy * result.area;
+    }
+  }
+
+  // Final centroid coordinates
+  if (totalArea === 0) return [0, 0]; // Avoid division by zero
+
+  cx /= totalArea;
+  cy /= totalArea;
+
+  // Convert Mercator coordinates to latitude and longitude
+  return [[cx, cy], mercatorToLatLon(cx, cy)];
+}
+
+window.calculatePolygonCentroid = calculatePolygonCentroid;
+
+function polygonAllPointsToLatLon(coordinates) {
+  function mercatorToLatLon(x, y) {
+    var lon = (x * 180) / 20037508.34;
+    var lat = (y * 180) / 20037508.34;
+    lat =
+      (180 / Math.PI) *
+      (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2);
+    return [parseFloat(lon.toFixed(2)), parseFloat(lat.toFixed(2))];
+  }
+
+  let latLonCoordinates = [];
+
+  coordinates.forEach((coordinate) => {
+    latLonCoordinates.push(mercatorToLatLon(coordinate[0], coordinate[1]));
+  });
+
+  const geoJson = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [latLonCoordinates],
+        },
+        properties: {
+          prop0: "value0",
+          prop1: { this: "that" },
+          fill: "#ffffff",
+          "fill-opacity": 0.5,
+        },
+      },
+      {
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: latLonCoordinates,
+        },
+        properties: {
+          stroke: "#ff0000",
+          "stroke-width": 2,
+        },
+      },
+    ],
+  };
+
+  return geoJson;
+}
+
+window.polygonAllPointsToLatLon = polygonAllPointsToLatLon;
 
 document.addEventListener("DOMContentLoaded", async () => {
   const points = await Api.getAllPoints();
   showAlert(points);
+  await createAllPolygonMarkers();
   clearAllMarkers();
 
   createAllSavedMarkers(points);
@@ -472,25 +779,91 @@ document.addEventListener("DOMContentLoaded", async () => {
   let mapClickHandler;
   let drawModifier;
 
-  function enableDrawPolygonAction() {
-    const source = markerLayer.getSource();
+  function drawShapeHandler(shape) {
+    if (drawModifier) {
+      map.removeInteraction(drawModifier);
+    }
+
     drawModifier = new Draw({
-      source: source,
-      type: "Polygon",
+      source: polygonLayer.getSource(),
+      type: shape,
     });
 
     map.addInteraction(drawModifier);
+
+    drawModifier.on("drawend", async (event) => {
+      const feature = event.feature;
+      const geometry = feature.getGeometry();
+      let coordinates;
+
+      if (geometry.getType() === "Circle") {
+        console.log("in override");
+        console.log("CIRCLE(" + geometry.getCenter().join(" ") + ")");
+      } else {
+        var format = new WKT();
+        const wkt = format.writeGeometry(geometry);
+
+        if (
+          geometry.getType() === "Polygon" ||
+          geometry.getType() === "MultiPolygon"
+        ) {
+          coordinates = geometry.getCoordinates();
+
+          const geojson = polygonAllPointsToLatLon(coordinates[0]);
+
+          if (geometry.getType() === "MultiPolygon") {
+            coordinates = coordinates.flat(); // Flatten if needed
+          }
+
+          var centerCoordinates = calculatePolygonCentroid(coordinates)[1];
+          var centerCoordinatesNotLatLon =
+            calculatePolygonCentroid(coordinates)[0];
+
+          console.log("Calculated Center:", centerCoordinates);
+          console.log("Calculated other Center:", centerCoordinatesNotLatLon);
+
+          const response = await ImageApi.getStaticImage(geojson);
+          const shapeName = "deneme";
+          const shapeDescription = "This is a shape";
+          const shapeWkt = wkt;
+          const shapeImage = response;
+          const shapeColor = "";
+
+          const wktResponse = await WktApi.createWkt(
+            shapeName,
+            shapeDescription,
+            shapeWkt,
+            shapeImage,
+            shapeColor
+          );
+
+          $("#polygon-query-table").DataTable().ajax.reload(null, false);
+          console.log(wktResponse);
+        } else {
+          console.error("Unsupported geometry type:", geometry.getType());
+        }
+      }
+    });
   }
 
-  function disableDrawPolygonAction() {}
+  function disableDrawing() {
+    if (drawModifier) {
+      map.removeInteraction(drawModifier);
+      drawModifier = null;
+    }
+  }
 
-  function enableDrawLineAction() {}
+  function drawShape() {
+    disableDrawing();
 
-  function disableDrawLineAction() {}
-
-  function enableDrawCircleAction() {}
-
-  function disableDrawCircleAction() {}
+    if (selectedAction.includes("draw-polygon-btn")) {
+      drawShapeHandler("Polygon");
+    } else if (selectedAction.includes("draw-line-btn")) {
+      drawShapeHandler("LineString");
+    } else if (selectedAction.includes("draw-circle-btn")) {
+      drawShapeHandler("Circle");
+    }
+  }
 
   function onMapClick(coordinate) {
     clickedCoordinates = coordinate;
@@ -534,7 +907,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const featureCollection = new Collection(markers);
 
-    const modifyInteraction = new Modify({
+    modifyInteraction = new Modify({
       features: featureCollection, // Pass the Collection instance here
     });
 
@@ -614,6 +987,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         this.classList.add("active");
         selectedAction.push(this.id);
       }
+
       if (selectedAction.includes("drag-and-update-btn")) {
         enableDragAndDropAction();
       } else {
@@ -623,13 +997,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (selectedAction.includes("add-point-btn")) {
         enableMapClick();
       } else {
-        removeTempMarkers();
         disableMapClick();
       }
 
-      if (selectedAction.includes("draw-polygon-btn")) {
-        enableDrawPolygonAction();
-      }
+      drawShape();
     });
   });
 
@@ -695,6 +1066,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#add-point-form").style.display = "block";
     document.querySelector("#query-form").style.display = "none";
     document.querySelector("#query-table-form").style.display = "none";
+    document.querySelector("#polygon-query-table").style.display = "none";
     document.body.classList.add("sidebar-open");
   });
 
@@ -703,6 +1075,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#map").style.width = "55%"; // Adjust the width as needed
     document.querySelector("#add-point-form").style.display = "none";
     document.querySelector("#query-form").style.display = "none";
+    document.querySelector("#polygon-query-table").style.display = "none";
     document.querySelector("#query-table-form").style.display = "block";
     document.body.classList.add("sidebar-open");
   });
@@ -713,7 +1086,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#map").style.width = "70%"; // Adjust the width as needed
     document.querySelector("#add-point-form").style.display = "none";
     document.querySelector("#query-form").style.display = "block";
+    document.querySelector("#polygon-query-table").style.display = "none";
     document.querySelector("#query-table-form").style.display = "none";
+    document.body.classList.add("sidebar-open");
+  });
+
+  document.querySelector(".polygon-actions").addEventListener("click", () => {
+    document.querySelector("#sidebar").style.width = "33%"; // Adjust the width as needed
+    document.querySelector("#map").style.width = "67%"; // Adjust the width as needed
+    document.querySelector("#add-point-form").style.display = "none";
+    document.querySelector("#query-form").style.display = "none";
+    document.querySelector("#query-table-form").style.display = "none";
+    document.querySelector("#polygon-query-table").style.display = "block";
     document.body.classList.add("sidebar-open");
   });
 
@@ -726,6 +1110,98 @@ document.addEventListener("DOMContentLoaded", async () => {
       clearAllMarkers();
 
       createAllSavedMarkers(points);
+    });
+
+  const polygonTable = new DataTable("#polygon-query-table", {
+    ajax: {
+      url: "http://localhost:5160/api/Values/wkt/all",
+      dataSrc: "wkt",
+    },
+    columns: [
+      { data: "id" },
+      {
+        data: "photoLocation",
+        render: function (data, type, row) {
+          return `
+            <div class="photo-div">
+              <img src="${data}" class="photo-div-img" alt="Photo" />
+            </div>
+          `;
+        },
+      },
+      { data: "name" },
+      { data: "description" },
+      {
+        data: null,
+        render: function (data, type, row) {
+          return `
+              <div class="query-row-btn-group">
+                <button class="polygon-query-table-btn view" 
+                        data-id="${row.id}"
+                        title="View this point">
+                  <img class="polygon-query-table-btn-img" src="/assets/view-icon.png" border="0" />
+                </button>
+                <button class="polygon-query-table-btn update" 
+                        title="Update this point" 
+                        data-id="${row.id}">
+                  <img class="polygon-query-table-btn-img" src="/assets/update-icon.png" border="0" />
+                </button>
+                <button class="polygon-query-table-btn delete" 
+                        title="Delete this point" 
+                        data-id="${row.id}">
+                  <img class="polygon-query-table-btn-img" src="/assets/delete-icon.png" border="0" />
+                </button>
+              </div>
+            `;
+        },
+      },
+    ],
+  });
+
+  document
+    .getElementById("polygon-query-table")
+    .addEventListener("click", async function (event) {
+      if (event.target.closest(".polygon-query-table-btn.delete")) {
+        const button = event.target.closest(".polygon-query-table-btn.delete");
+        const id = parseInt(button.getAttribute("data-id"));
+        if (!isNaN(id)) {
+          await deleteFromPolygonTable(id);
+          clearPolygonMarkers();
+          await createAllPolygonMarkers();
+          $("#polygon-query-table").DataTable().ajax.reload(null, false);
+        }
+      }
+    });
+
+  document
+    .getElementById("polygon-query-table")
+    .addEventListener("click", async function (event) {
+      if (event.target.closest(".polygon-query-table-btn.update")) {
+        const button = event.target.closest(".polygon-query-table-btn.update");
+        const id = parseInt(button.getAttribute("data-id"));
+        if (!isNaN(id)) {
+          await updatePolygonTableEntry(id);
+          $("#polygon-query-table").DataTable().ajax.reload(null, false);
+        }
+      }
+    });
+
+  document
+    .getElementById("polygon-query-table")
+    .addEventListener("click", async function (event) {
+      if (event.target.closest(".polygon-query-table-btn.view")) {
+        const button = event.target.closest(".polygon-query-table-btn.view");
+        const id = parseInt(button.getAttribute("data-id"));
+        if (!isNaN(id)) {
+          const wkt = await WktApi.getWktById(id);
+          const coordinatesArr = parsePolygonString(wkt.wkt);
+
+          const centerOfPolygon = calculatePolygonCentroid(coordinatesArr)[0];
+
+          console.log(centerOfPolygon);
+          await panAndZoomToPolygon(id, centerOfPolygon, 14, 2000);
+        }
+      }
     });
 
   const table = new DataTable("#query-table", {

@@ -2,6 +2,7 @@
 using MapApplication.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MapApplication.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240820150640_AddAllTables4")]
+    partial class AddAllTables4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,7 +62,7 @@ namespace MapApplication.Migrations
 
                     b.HasKey("FeatureId");
 
-                    b.HasIndex("OwnerShapeId");
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("features", (string)null);
                 });
@@ -221,16 +224,15 @@ namespace MapApplication.Migrations
                 {
                     b.HasOne("MapApplication.Data.PointDb", null)
                         .WithMany("Features")
-                        .HasForeignKey("OwnerShapeId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("MapApplication.Data.WktDb", null)
                         .WithMany("Features")
-                        .HasForeignKey("OwnerShapeId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_Features_Wkt_OwnerShapeId");
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MapApplication.Data.PointDb", b =>
