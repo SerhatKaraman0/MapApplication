@@ -10,7 +10,6 @@ namespace MapApplication.Data
         public string PhotoLocation { get; set; }
         public string Color { get; set; }
         public string Date { get; set; }
-        public List<FeatureDb> Features { get; set; }
         public int OwnerId { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using MapApplication.Data;
@@ -187,7 +188,6 @@ namespace MapApplication.Services
                 }
 
                 var user = await _context.Users.FindAsync(ownerId);
-                user.UserPoints.AddRange(newPoints);
                 await _unitOfWork.Points.AddRangeAsync(newPoints);
                 await _unitOfWork.CommitAsync(); // Commit the transaction
                 return _responseService.SuccessResponse(newPoints, "10 Points generated successfully.", true);
@@ -390,106 +390,124 @@ namespace MapApplication.Services
             }
         }
 
-        public async Task<Response> DeleteInRange(int ownerId, double minX, double minY, double maxX, double maxY)
+        public async Task<Response> GetPointsInTheSameDay(int ownerId, string date)
         {
             try
             {
-                var points = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId &&
-                    p.X_coordinate >= minX && p.X_coordinate <= maxX &&
-                    p.Y_coordinate >= minY && p.Y_coordinate <= maxY);
-                if (points.success)
+                // Parse the input date string
+                if (!DateTime.TryParseExact(date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime inputDate))
                 {
-                    var pointsToRemove = ((List<PointDb>)points.point);
-                    if (pointsToRemove.Any())
+                    return _responseService.ErrorResponse(new List<PointDb>(), "Invalid date format", false);
+                }
+
+                // Define the start and end date for the query
+                var startDate = inputDate.Date;
+                var endDate = startDate.AddDays(1);
+
+                // Fetch all points for the specified ownerId
+                var pointsResult = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId);
+
+                if (!pointsResult.success)
+                {
+                    return _responseService.ErrorResponse(new List<PointDb>(), pointsResult.ResponseMessage, false);
+                }
+
+                // Cast the result to a list of PointDb
+                var points = (List<PointDb>)pointsResult.point;
+
+                // Filter points by date
+                var filteredPoints = points.Where(p =>
+                {
+                    // Parse the date from the point
+                    if (DateTime.TryParseExact(p.Date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
                     {
-                        foreach (var point in pointsToRemove)
-                        {
-                            await _unitOfWork.Points.DeleteAsync(point.Id);
-                        }
-                        await _unitOfWork.CommitAsync(); // Commit the transaction
-                        return _responseService.SuccessResponse(pointsToRemove, "Points in range deleted successfully.", true);
+                        // Check if the parsed date is within the range
+                        return parsedDate >= startDate && parsedDate < endDate;
                     }
-                    return _responseService.ErrorResponse(new List<PointDb>(), "No points found in the specified range.", false);
+                    return false;
+                }).ToList();
+
+                if (filteredPoints.Any())
+                {
+                    return _responseService.SuccessResponse(filteredPoints, "Points found for the specified date.", true);
                 }
-                return _responseService.ErrorResponse(new List<PointDb>(), points.ResponseMessage, false);
+                return _responseService.ErrorResponse(new List<PointDb>(), "No points found for the specified date.", false);
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<PointDb>(), $"Error deleting points in range: {ex.Message}", false);
+                return _responseService.ErrorResponse(new List<PointDb>(), $"Error fetching points for the date: {ex.Message}", false);
             }
         }
 
-        public async Task<Response> GetFeatureById(int ownerId, int featureId)
+
+
+
+
+        public async Task<Dictionary<string, Dictionary<string, List<PointDb>>>> GetPointsCategorizedByDate(int ownerId)
         {
+            // Initialize the dictionary that will hold the categorized points
+            var categorizedPoints = new Dictionary<string, Dictionary<string, List<PointDb>>>();
+
             try
             {
-                var feature = await _context.Features
-                    .Where(f => f.FeatureId == featureId && f.OwnerId == ownerId)
-                    .FirstOrDefaultAsync();
+                // Fetch all points for the specified ownerId
+                var pointsResult = await _unitOfWork.Points.FindAsync(p => p.OwnerId == ownerId);
 
-                if (feature != null)
+                if (!pointsResult.success)
                 {
-                    return _responseService.SuccessResponse(new List<PointDb>(), $"Feature with ID {featureId} retrieved successfully.", true);
+                    // If fetching points fails, return an empty dictionary
+                    return new Dictionary<string, Dictionary<string, List<PointDb>>>();
                 }
-                return _responseService.ErrorResponse(new List<FeatureDb>(), "Feature not found", false);
+
+                // Cast the result to a list of PointDb
+                var points = (List<PointDb>)pointsResult.point;
+
+                // Process each point and categorize it by year and month
+                foreach (var point in points)
+                {
+                    // Parse the date from the point
+                    if (!DateTime.TryParseExact(point.Date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                    {
+                        // Skip points with invalid date formats
+                        continue;
+                    }
+
+                    // Extract year and month from the parsed date
+                    var year = parsedDate.Year.ToString();
+                    var month = parsedDate.ToString("MM");
+
+                    // Check if the year key exists, if not create it
+                    if (!categorizedPoints.ContainsKey(year))
+                    {
+                        categorizedPoints[year] = new Dictionary<string, List<PointDb>>();
+                    }
+
+                    // Check if the month key exists within the year, if not create it
+                    if (!categorizedPoints[year].ContainsKey(month))
+                    {
+                        categorizedPoints[year][month] = new List<PointDb>();
+                    }
+
+                    // Add the point to the appropriate year and month
+                    categorizedPoints[year][month].Add(point);
+                }
             }
             catch (Exception ex)
             {
-                return _responseService.ErrorResponse(new List<FeatureDb>(), $"Error retrieving feature: {ex.Message}", false);
+                // Handle exceptions (logging, etc.)
+                Console.WriteLine($"Error categorizing points: {ex.Message}");
+        
+                // Return an empty dictionary in case of an error
+                return new Dictionary<string, Dictionary<string, List<PointDb>>>();
             }
+
+            // Return the categorized points
+            return categorizedPoints;
         }
 
-        public async Task<Response> UpdateFeatureById(int ownerId, int featureId, FeatureDb updatedFeature)
-        {
-            try
-            {
-                var feature = await _context.Features
-                    .Where(f => f.FeatureId == featureId && f.OwnerId == ownerId)
-                    .FirstOrDefaultAsync();
-
-                if (feature != null)
+                public Task<Response> DeleteInRange(int ownerId, double minX, double minY, double max_X, double maxY)
                 {
-                    feature.FeatureName = updatedFeature.FeatureName;
-                    feature.FeatureData = updatedFeature.FeatureData;
-                    feature.createdDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-
-                    _context.Features.Update(feature);
-                    await _context.SaveChangesAsync(); // Commit the transaction
-                    return _responseService.SuccessResponse(new List<PointDb>(), $"Feature with ID {featureId} updated successfully.", true);
+                    throw new NotImplementedException();
                 }
-                return _responseService.ErrorResponse(new List<FeatureDb>(), "Feature not found", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<FeatureDb>(), $"Error updating feature: {ex.Message}", false);
-            }
+            }       
         }
-
-        public async Task<Response> DeleteFeatureById(int ownerId, int featureId)
-        {
-            try
-            {
-                var feature = await _context.Features
-                    .Where(f => f.FeatureId == featureId && f.OwnerId == ownerId)
-                    .FirstOrDefaultAsync();
-
-                if (feature != null)
-                {
-                    _context.Features.Remove(feature);
-                    await _context.SaveChangesAsync(); // Commit the transaction
-                    return _responseService.SuccessResponse(new List<PointDb>(), $"Feature with ID {featureId} deleted successfully.", true);
-                }
-                return _responseService.ErrorResponse(new List<FeatureDb>(), "Feature not found", false);
-            }
-            catch (Exception ex)
-            {
-                return _responseService.ErrorResponse(new List<FeatureDb>(), $"Error deleting feature: {ex.Message}", false);
-            }
-        }
-
-        public Task<Response> UpdateFeatureById(int ownerId, int featureId)
-        {
-            throw new NotImplementedException();
-        }
-    }
-}

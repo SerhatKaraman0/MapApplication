@@ -23,6 +23,7 @@ namespace MapApplication.Services
             try
             {
                 wkt.Date = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+                wkt.OwnerId = ownerId;
                 await _context.Wkt.AddAsync(wkt);
                 await _context.SaveChangesAsync();
                 return _responseService.SuccessResponse(new List<WktDb> { wkt }, "Wkt retrieved successfully", true);
@@ -42,7 +43,7 @@ namespace MapApplication.Services
         {
             try
             {
-                var wkt = await _context.Wkt.FindAsync(id);
+                var wkt = await _context.Wkt.Where(w => w.OwnerId == ownerId && w.Id == id).FirstOrDefaultAsync();
                 if (wkt == null)
                 {
                     return _responseService.ErrorResponse(new List<WktDb> {  }, "Wkt not found", false);
@@ -63,7 +64,9 @@ namespace MapApplication.Services
         {
             try
             {
-                var wktList = await _context.Wkt.ToListAsync();
+                var wktList = await _context.Wkt
+                    .Where(w => w.OwnerId == ownerId)
+                    .ToListAsync();
                 return _responseService.SuccessResponse(wktList, "Wkt retrieved successfully", true);
             }
             catch (Exception ex)
@@ -81,13 +84,13 @@ namespace MapApplication.Services
         {
             try
             {
-                var wkt = await _context.Wkt.FindAsync(id);
+                var wkt = await _context.Wkt.Where(w => w.OwnerId == ownerId && w.Id == id).ToListAsync();
                 if (wkt == null)
                 {
                     return _responseService.ErrorResponse(new List<WktDb> { }, "Wkt not found", false);
                 }
 
-                return _responseService.SuccessResponse(new List<WktDb> { wkt }, "Wkt retrieved successfully", true);
+                return _responseService.SuccessResponse(wkt, "Wkt retrieved successfully", true);
             }
             catch (Exception ex)
             {
@@ -104,7 +107,7 @@ namespace MapApplication.Services
         {
             try
             {
-                var wkt = await _context.Wkt.FindAsync(id);
+                var wkt = await _context.Wkt.Where(w => w.OwnerId == ownerId && w.Id == id).FirstOrDefaultAsync();
                 if (wkt == null)
                 {
                     return _responseService.ErrorResponse(new List<WktDb> { }, "Wkt not found", false);

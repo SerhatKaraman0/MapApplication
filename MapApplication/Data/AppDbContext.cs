@@ -6,7 +6,6 @@ namespace MapApplication.Data
     {
         public DbSet<PointDb> Points { get; set; }
         public DbSet<WktDb> Wkt { get; set; }
-        public DbSet<FeatureDb> Features { get; set; }
         public DbSet<UsersDb> Users { get; set; }
         public DbSet<TabsDb> Tabs { get; set; }
 
@@ -45,12 +44,6 @@ namespace MapApplication.Data
                       .WithMany(u => u.UserPoints)
                       .HasForeignKey(p => p.OwnerId)
                       .OnDelete(DeleteBehavior.Cascade);
-
-                // Configure the one-to-many relationship with FeatureDb
-                entity.HasMany(p => p.Features)
-                      .WithOne()
-                      .HasForeignKey(f => f.OwnerId)
-                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configure WktDb
@@ -84,12 +77,6 @@ namespace MapApplication.Data
                 entity.HasOne<UsersDb>()
                       .WithMany(u => u.UserShapes)
                       .HasForeignKey(w => w.OwnerId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                // Configure the one-to-many relationship with FeatureDb
-                entity.HasMany(p => p.Features)
-                      .WithOne()
-                      .HasForeignKey(f => f.OwnerId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -137,52 +124,8 @@ namespace MapApplication.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure FeatureDb
-            modelBuilder.Entity<FeatureDb>(entity =>
-            {
-                entity.ToTable("features");
-                entity.HasKey(p => p.FeatureId);
-
-                entity.Property(p => p.OwnerId)
-                      .HasColumnName("ownerId")
-                      .IsRequired();
-
-                entity.Property(p => p.OwnerShapeId)
-                      .HasColumnName("ownerShapeId")
-                      .IsRequired();
-
-                entity.Property(p => p.OwnerShapeType)
-                      .HasColumnName("ownerShapeType")
-                      .IsRequired();
-
-                entity.Property(p => p.FeatureName)
-                      .HasColumnName("featureName")
-                      .IsRequired();
-
-                entity.Property(p => p.FeatureData)
-                      .HasColumnName("featureData")
-                      .IsRequired();
-
-                entity.Property(p => p.createdDate)
-                      .HasColumnName("createdDate")
-                      .IsRequired();
-
-                // Assuming OwnerShapeId is linked to PointDb.Id
-                entity.HasOne<PointDb>()
-                      .WithMany(p => p.Features)
-                      .HasForeignKey(f => f.OwnerShapeId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                entity.HasOne<WktDb>()
-                      .WithMany(w => w.Features)
-                      .HasForeignKey(f => f.OwnerShapeId)
-                      .OnDelete(DeleteBehavior.NoAction)
-                      .HasConstraintName("FK_Features_Wkt_OwnerShapeId");
-            });
-
-
             // Other entity configurations
         }
 
     }
 }
-

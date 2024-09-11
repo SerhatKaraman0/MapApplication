@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using MapApplication.Data;
 using MapApplication.Interfaces;
 using MapApplication.Models;
+using MapApplication.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MapApplication.Controllers
@@ -69,6 +70,29 @@ namespace MapApplication.Controllers
         {
             var response = _pointService.GetPointsCount(ownerId);
             return response;
+        }
+
+        [HttpGet("{ownerId}/getPointsCategorizedByDate")]
+        public async Task<Dictionary<string, Dictionary<string, List<PointDb>>>> GetPointsCategorizedByDate([FromRoute] int ownerId)
+        {
+            try
+            {
+                var pointsCategorized = await _pointService.GetPointsCategorizedByDate(ownerId);
+                return pointsCategorized;
+            }
+            catch (Exception ex)
+            {
+                return new Dictionary<string, Dictionary<string, List<PointDb>>>();
+            }
+        }
+
+        [HttpGet("{ownerId}/getPointsInTheSameDay")]
+        public async Task<Response> GetPointsInTheSameDay([FromRoute] int ownerId, [FromQuery] string date)
+        {
+           
+            var response = await _pointService.GetPointsInTheSameDay(ownerId, date);
+            return response;
+            
         }
 
         [HttpGet("{ownerId}/distance")]

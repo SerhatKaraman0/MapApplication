@@ -14,6 +14,8 @@ namespace MapApplication.Interfaces
 		Task<UserResponse> AddToUsersPoints(int userId, PointDb point);
 		Task<UserResponse> AddToUsersShapes(int userId, WktDb wkt);
 		Task<UserResponse> AddToUsersTabs(int userId, TabsDb newTab);
-	}
+		Task<UsersDb> GetUserByEmailAndPassword(string email, string password);
+
+    }
 }
 

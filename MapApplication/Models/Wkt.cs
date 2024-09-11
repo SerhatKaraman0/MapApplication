@@ -11,7 +11,7 @@ namespace MapApplication.Models
 		public string WKT { get; set; }
 		public string PhotoLocation { get; set; }
         public string Color { get; set; }
-        public List<FeatureDb> Features { get; set; }
+
     }
 }
 

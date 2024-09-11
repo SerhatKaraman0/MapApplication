@@ -72,6 +72,7 @@ namespace MapApplication.Services
 
                 wkt.OwnerId = userId;
                 _context.Wkt.Add(wkt);  // Ensure the shape is tracked by the context
+               
                 await _context.SaveChangesAsync();
 
                 return _userResponseService.SuccessResponse(new List<UsersDb> { user }, "Shape added successfully", true);
@@ -121,6 +122,10 @@ namespace MapApplication.Services
             try
             {
                 user.createdDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+                user.UserPoints[0].OwnerId = user.UserId;
+                user.UserShapes[0].OwnerId = user.UserId;
+                user.UserTabs[0].OwnerId = user.UserId;
+
                 await _context.Users.AddAsync(user);
                 await _context.SaveChangesAsync();
                 return _userResponseService.SuccessResponse(new List<UsersDb> { user }, "User created successfully", true);
@@ -209,6 +214,13 @@ namespace MapApplication.Services
             {
                 return _userResponseService.ErrorResponse(new List<UsersDb>(), ex.Message, false);
             }
+        }
+
+        public async Task<UsersDb> GetUserByEmailAndPassword(string email, string password)
+        {
+            // This example assumes plain text password storage, which is not recommended
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.UserEmail == email && u.UserPassword == password);
         }
     }
 }

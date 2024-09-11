@@ -78,6 +78,12 @@ namespace MapApplication.Controllers
             return response;
         }
 
+        [HttpGet("email/{email}/pwd/{password}")]
+        public async Task<UsersDb> GetUserByEmailAndPassword([FromRoute] string email, [FromRoute] string password)
+        {
+            var response = await _userService.GetUserByEmailAndPassword(email, password);
+            return response;
+        }
 
     }
 }

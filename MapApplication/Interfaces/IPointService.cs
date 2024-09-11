@@ -25,9 +25,8 @@ namespace MapApplication.Interfaces
         Task<Response> DeleteInRange(int ownerId, double minX, double minY, double max_X, double maxY);
         Task<Response> GetPointsInRadius(int ownerId, double circleX, double circleY, double radius);
         Task<Response> GetNearestPoint(int ownerId, double X, double Y);
-        Task<Response> GetFeatureById(int ownerId, int featureId);
-        Task<Response> UpdateFeatureById(int ownerId, int featureId);
-        Task<Response> DeleteFeatureById(int ownerId, int featureId);
+        Task<Response> GetPointsInTheSameDay(int ownerId, string date);
+        Task<Dictionary<string, Dictionary<string, List<PointDb>>>> GetPointsCategorizedByDate(int ownerId);
     }
 
 }
